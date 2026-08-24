@@ -1,37 +1,39 @@
 {
-  "team_id": "your-team-id",
-  "domain": "coding_assistants",
-  "language_scope": ["en"],
+  "team_id": "TebebAI",
+  "domain": "math_scientific_reasoning",
+  "language_scope": [
+    "en"
+  ],
   "african_alpha_claim": false,
   "budget_laptop_claim": true,
   "submitter": {
-    "name": "your-name",
-    "email": "your-email@domain.com",
-    "github_handle": "your-github"
+    "name": "Nathan Behailu",
+    "email": "nz2212@nyu.edu",
+    "github_handle": "nathanbehailuz"
   },
   "cross_disciplinary_pairing": {
     "discipline": "education",
     "load_bearing": true,
-    "description": "Brief description of how your model serves a real-world domain."
+    "description": "Offline English STEM tutor (solve, hint, first-error)."
   },
   "test_prompts": [
     {
       "prompt_id": "tp_001",
-      "prompt": "Write a Python function that reads a CSV file and returns the column with the highest mean value."
+      "prompt": "I wrote 3/4 + 1/2 = 4/6. Where did I go wrong? Give me one hint without telling me the final answer."
     },
     {
       "prompt_id": "tp_002",
-      "prompt": "Explain the difference between a list and a tuple in Python, and give one example where each is the better choice."
+      "prompt": "I'm stuck on 2x + 7 = 19. Can you give me one hint without telling me what x is?"
     }
   ],
   "model": {
-    "name": "SmolLM2-135M-Instruct-Q4_K_M",
+    "name": "tebeb_tutor_1.7b",
     "runtime": "llama.cpp",
-    "quantization": "GGUF Q4_K_M",
-    "parameters_estimate": "135M",
+    "quantization": "Q5_K_M",
+    "parameters_estimate": "1.7B",
     "packaging": "binary_bundle"
   },
   "_runtime": {
-    "model_path": "model/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+    "model_path": "model/tebeb_tutor_1.7b.gguf"
   }
 }

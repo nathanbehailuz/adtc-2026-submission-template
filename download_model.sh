@@ -1,38 +1,34 @@
 #!/usr/bin/env bash
-# Download your model weight file.
-#
-# Rules:
-#   - Must be idempotent (safe to run multiple times).
-#   - Must download without any credentials (public URL only).
-#   - The output path must match `_runtime.model_path` in metadata.json.
-
+# Idempotent download of TebebAI GGUF from Hugging Face (no credentials).
+# Path must match metadata.json → _runtime.model_path
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODEL_DIR="$HERE/model"
-MODEL_FILE="$MODEL_DIR/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEST="${ROOT}/model/tebeb_tutor_1.7b.gguf"
+URL="https://huggingface.co/nz2212/tebeb_tutor_1.7b/resolve/main/tebeb_tutor_1.7b.gguf"
+EXPECTED_BYTES=1257879232
 
-# ── Replace this URL with your public model weight URL ─────────────────────────
-MODEL_URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
-# ───────────────────────────────────────────────────────────────────────────────
+mkdir -p "${ROOT}/model"
 
-mkdir -p "$MODEL_DIR"
-
-if [[ -f "$MODEL_FILE" ]]; then
-  echo "model already present at $MODEL_FILE — skipping download"
-  exit 0
+if [[ -f "${DEST}" ]]; then
+  size="$(stat -c%s "${DEST}" 2>/dev/null || stat -f%z "${DEST}")"
+  if [[ "${size}" -eq "${EXPECTED_BYTES}" ]]; then
+    echo "[download_model] already present: ${DEST} (${size} bytes)"
+    exit 0
+  fi
+  echo "[download_model] unexpected size ${size} (want ${EXPECTED_BYTES}); re-downloading"
+  rm -f "${DEST}"
 fi
 
-echo "downloading $MODEL_URL → $MODEL_FILE (~80 MB)…"
-
-if command -v curl > /dev/null 2>&1; then
-  curl -L --fail --progress-bar -o "$MODEL_FILE.partial" "$MODEL_URL"
-elif command -v wget > /dev/null 2>&1; then
-  wget --show-progress -O "$MODEL_FILE.partial" "$MODEL_URL"
-else
-  echo "error: neither curl nor wget found" >&2
+echo "[download_model] fetching ${URL}"
+tmp="${DEST}.partial"
+rm -f "${tmp}"
+curl -L --fail --retry 5 --retry-delay 2 -o "${tmp}" "${URL}"
+size="$(stat -c%s "${tmp}" 2>/dev/null || stat -f%z "${tmp}")"
+if [[ "${size}" -ne "${EXPECTED_BYTES}" ]]; then
+  echo "[download_model] ERROR: got ${size} bytes, expected ${EXPECTED_BYTES}" >&2
+  rm -f "${tmp}"
   exit 1
 fi
-
-mv "$MODEL_FILE.partial" "$MODEL_FILE"
-echo "done: $MODEL_FILE"
+mv "${tmp}" "${DEST}"
+echo "[download_model] done: ${DEST} (${size} bytes)"
