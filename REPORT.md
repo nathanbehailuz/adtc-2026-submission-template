@@ -1,125 +1,378 @@
-# TebebAI — Offline English STEM Tutor
+# TebebAI: Offline STEM Tutor
 
-**Team:** TebebAI · ADTC 2026 · domain `math_scientific_reasoning`  
-**Model:** `tebeb_tutor_1.7b` · base `Qwen/Qwen3-1.7B` · runtime **llama.cpp** · quant **Q5_K_M** (~1.2 GB GGUF)  
-**Cross-disciplinary pairing:** education (load-bearing) — offline STEM tutoring for low-connectivity learners
+**Team:** TebebAI
+**ADTC 2026 Domain:** `math_scientific_reasoning`
+**Model:** `tebeb_tutor_1.7b`
+**Base:** `Qwen/Qwen3-1.7B`
+**Runtime:** `llama.cpp`
+**Quantization:** `Q5_K_M`
+**Model size:** ~1.2 GB GGUF
+**Cross-disciplinary pairing:** Education
 
 ---
 
 ## 1. Problem
 
-Students in low-connectivity settings need a **STEM tutor that runs fully offline** on an ordinary 8 GB laptop—not a cloud chat they cannot reach. The product must behave like a teacher: **solve**, **explain**, **hint without revealing the answer**, and **diagnose the first error** in student work. ADTC’s Laptop LLM track scores accuracy (50%), generation throughput (30%), and memory efficiency (20%) under a ~7 GB peak-RSS budget, with **llama.cpp / GGUF only**.
+TebebAI is an offline STEM tutor designed for students who cannot assume reliable internet access, cloud APIs, or high-end hardware.
 
-**TebebAI** (*tebeb* = wisdom that is shared) started as a bilingual Amharic–English ambition. Weeks of v0–v5 experiments on Jubail hit hard walls: gated Hugging Face corpora, missing AfriqueLLM GSM8K access, severe Amharic tokenizer fertility on Qwen vs Gemma, and weak Amharic eval (AfriMGSM AM remained ~2%). We deleted ~365 GB of dead-end artifacts and shipped a focused **English-only v6** specialist so something real reaches students within the hackathon window. The bilingual vision remains the next iteration; scope discipline was the shippable choice.
+The target is an ordinary **8 GB laptop with integrated graphics**. Within that constraint, the model should do more than return final answers. It should behave like a tutor by:
 
-Target behaviors (and our two `metadata.json` test prompts):
+* solving STEM problems step by step,
+* explaining concepts,
+* giving hints without revealing the answer,
+* and identifying the first mistake in a student's reasoning.
 
-- *“I wrote 3/4 + 1/2 = 4/6. Where did I go wrong? Give me one hint without telling me the final answer.”*
-- *“I'm stuck on 2x + 7 = 19. Can you give me one hint without telling me what x is?”*
+This creates a systems problem as much as a modeling problem. ADTC evaluates model quality, generation throughput, and memory efficiency, so we designed TebebAI around all three rather than optimizing accuracy alone.
 
-One GGUF file, no API keys, no multi-model router: download once, tutor offline (`bash download_model.sh` → `model/tebeb_tutor_1.7b.gguf` from Hugging Face `nz2212/tebeb_tutor_1.7b`; optional local demo: `python chat.py`).
+The final system uses a single local GGUF model through `llama.cpp`. Once downloaded, it requires no API key, cloud service, or internet connection.
+
+Two representative tutoring prompts are:
+
+> "I wrote 3/4 + 1/2 = 4/6. Where did I go wrong? Give me one hint without telling me the final answer."
+
+> "I'm stuck on 2x + 7 = 19. Can you give me one hint without telling me what x is?"
 
 ---
 
-## 2. Design Decisions
+## 2. System Design
 
-### Base model and adaptation
+### Base model
 
-| Item | Choice | Why |
-|------|--------|-----|
-| Base | `Qwen/Qwen3-1.7B` | Fits laptop RSS after PTQ; strong English STEM prior; official GGUF / llama.cpp path |
-| Adaptation | **QLoRA SFT only** (no CPT in v6) | Parameter-efficient on A100; CPT deferred after multilingual cut |
-| Train config | `lora_r=16`, `alpha=32`, 4-bit NF4, bf16, 1 epoch, max seq 2048 | See `adtc/training/configs/qlora_qwen3_1_7b_v6.yaml` |
-| Thinking mode | Off for eval/deploy | HF: `enable_thinking=False`; GGUF: `/no_think` prefix — shorter, more consistent replies |
+We use **Qwen3-1.7B** as the base model.
 
-### Data (`adtc/data/`)
+A 1.7B parameter model gives us enough capacity for useful STEM reasoning while remaining small enough to quantize and run comfortably within the laptop memory budget.
 
-Built `sft_mix_v6.jsonl` (**10,473** rows) via `mix_sft_v6.py`:
+| Decision              | Choice            | Reason                                                             |
+| --------------------- | ----------------- | ------------------------------------------------------------------ |
+| Base model            | `Qwen/Qwen3-1.7B` | Small enough for local deployment with a useful English STEM prior |
+| Adaptation            | QLoRA SFT         | Efficient fine-tuning on limited training compute                  |
+| Continued pretraining | Not used in v6    | Final English pipeline did not require CPT                         |
+| Context length        | 2048              | Sufficient for the targeted tutoring interactions                  |
+| Thinking mode         | Disabled          | Shorter responses and more predictable CPU inference               |
+| Runtime               | `llama.cpp`       | Required GGUF-compatible local CPU inference                       |
+| Final quant           | `Q5_K_M`          | Best measured balance of memory and throughput                     |
 
-| Source | n | Behaviors |
-|--------|--:|-----------|
-| GSM8K train | 7,473 | solve, explain, hint, first_error |
-| SciQ train | 3,000 | solve, explain |
+### Training data
 
-Training rows were **deduplicated** against frozen eval sets `en_stem_holdout_v0` and `afrimgsm_eng_test_v0` (**0** leakage drops). Frozen eval (never trained on): AfriMGSM EN (250), EN STEM holdout (100), custom tutoring rubric (101); Amharic suites kept only as secondary diagnostics.
+The final supervised fine-tuning dataset contains **10,473 examples**.
 
-### Pipeline (`adtc/hpc/submit_chain.sh`)
+| Source | Examples | Behaviors                         |
+| ------ | -------: | --------------------------------- |
+| GSM8K  |    7,473 | solve, explain, hint, first-error |
+| SciQ   |    3,000 | solve, explain                    |
 
-Reproduced end-to-end on NYUAD Jubail HPC:
+Instead of training only on question-answer pairs, we converted examples into different tutoring interactions. This lets the same model respond differently when a student asks for a full solution, an explanation, a hint, or help identifying a mistake.
 
+Training data was deduplicated against the frozen English evaluation sets before training. No overlapping examples were found.
+
+### Fine-tuning
+
+The model was adapted using **QLoRA supervised fine-tuning** on an A100 GPU.
+
+Key settings:
+
+```text
+LoRA rank:       16
+LoRA alpha:      32
+QLoRA:           4-bit NF4
+Compute dtype:   bf16
+Epochs:          1
+Max sequence:    2048
 ```
-GSM8K + SciQ  →  sft_mix_v6 (10,473)
-       ↓
-QLoRA SFT (A100, bf16)  →  merge LoRA into base
-       ↓
-GGUF f16 → Q8 / Q6 / Q5 / Q4
-       ↓
-HF frozen eval  +  GGUF frozen eval  +  ADTC profiler
-       ↓
-Deploy pick: Q5_K_M  →  this submission package
+
+After training, the LoRA adapter was merged into the original Qwen3-1.7B weights before conversion to GGUF.
+
+---
+
+## 3. Training and Deployment Pipeline
+
+The complete pipeline is reproducible through:
+
+```bash
+cd adtc/hpc
+bash submit_chain.sh
 ```
 
-Slurm stages: `prepare_mix` → `train_sft` → `merge_lora` → `convert_gguf` → `eval_hf` / `eval_gguf` → `profile_gguf`. Staging helpers live under `adtc/eval/`; the submission surface is this folder (`metadata.json`, `download_model.sh`, `REPORT.md`, `chat.py`).
+Pipeline:
 
-### Quantization pick (Gate 5)
+```text
+GSM8K + SciQ
+      |
+      v
+10,473-example tutoring dataset
+      |
+      v
+QLoRA supervised fine-tuning
+      |
+      v
+Merge LoRA into Qwen3-1.7B
+      |
+      v
+Convert merged model to GGUF
+      |
+      v
+Q4 / Q5 / Q6 quantization sweep
+      |
+      v
+Frozen evaluation + profiling
+      |
+      v
+Q5_K_M deployment model
+```
 
-We swept Q4_K_M / Q5_K_M / Q6_K with the pinned ADTC profiler (participant mode, hardware telemetry). **Q5_K_M** won the Pareto trade-off: ~1.2 GB on disk, acceptable TPS, **lowest peak RSS** among scored quants, highest hardware composite under our skip-accuracy gate.
+The Slurm workflow covers:
 
-| Quant | Gen TPS | Peak RSS (MB) | Composite |
-|-------|--------:|--------------:|----------:|
-| Q4_K_M | 2.54 | 1897.66 | 19.79 |
-| **Q5_K_M** | **2.46** | **1402.11** | **21.01** |
-| Q6_K | 2.44 | 1553.22 | 20.55 |
+```text
+prepare_mix
+    ↓
+train_sft
+    ↓
+merge_lora
+    ↓
+convert_gguf
+    ↓
+eval_hf / eval_gguf
+    ↓
+profile_gguf
+```
 
-Shipped name: `tebeb_tutor_1.7b` at `_runtime.model_path` = `model/tebeb_tutor_1.7b.gguf`.
+This produces the final submission model:
 
----
-
-## 3. Constraints
-
-- **Runtime:** llama.cpp + single GGUF only (ADTC rule).
-- **Hardware:** 8 GB Standard Laptop profile; peak RSS must stay under the ~7 GB evaluator budget. Our deploy peak is **~1.4 GB**.
-- **Offline:** zero network during inference; weights arrive only via `download_model.sh` before profiling.
-- **Score shape:** `0.5·S_acc + 0.3·S_tps + 0.2·S_mem` (with thermal penalty / OOM disqualification in the official profiler).
-- **Training vs deploy precision:** QLoRA trains in 4-bit; deployment is **Q5_K_M** GGUF—separate optimization problems.
-- **Honest caveat:** profiler TPS / RSS / `S_tps=16.4` / `S_mem=80.44` were measured on **Jubail compute nodes** (EPYC), not yet re-run on a physical 8 GB Standard Laptop. Gate 5 used `--skip-accuracy`; accuracy below is from frozen HF/GGUF eval, not the profiler accuracy arrays.
-
----
-
-## 4. Benchmarks
-
-### HF frozen eval (merged checkpoint, full sets)
-
-| Suite | n | Accuracy |
-|-------|--:|---------:|
-| Custom tutoring (hint / first-error / explain) | 101 | **0.980** |
-| AfriMGSM EN | 250 | **0.392** |
-| EN STEM holdout | 100 | **0.370** |
-| AfriMGSM AM (secondary; not trained) | 250 | 0.024 |
-| AfriMMLU AM (secondary) | 500 | 0.216 |
-
-Primary EN KPIs improved vs our early bilingual baseline (~0.34 on AfriMGSM EN and holdout) while keeping the tutoring rubric near ceiling—the product behavior we optimized for.
-
-### Profiler (deploy GGUF Q5_K_M)
-
-| Metric | Value |
-|--------|------:|
-| Generation tokens/s | 2.46 |
-| Peak RSS | 1402 MB |
-| Steady RSS | 1304 MB |
-| Throttled | false |
-| S_tps (performance) | 16.4 |
-| S_mem (efficiency) | 80.44 |
-| Hardware composite | 21.01 |
-
-Artifacts and day-to-day notes live in the research tree under `adtc/docs/artifacts/v6/` and `adtc/docs/RESULTS_REPORT.md`. Local smoke after download: `python chat.py` (strips `<think>` / `<<…>>`, keeps multi-turn context) or the pinned `adtc-profiler` participant run documented in `README.md`.
+```text
+model/tebeb_tutor_1.7b.gguf
+```
 
 ---
 
-## 5. What we learned / next
+## 4. Quantization
 
-**Small specialist + tutoring data beats oversized multilingual ambition under laptop constraints.** A 1.7B model with 10k curated rows nails hint and first-error behavior even when raw MGSM sits near ~40%.
+The fine-tuned model was converted to GGUF and tested at multiple quantization levels.
 
-**Next:** native Amharic tutoring SFT (authored data, fertility-aware base), re-profile on a real 8 GB laptop with accuracy-inclusive profiler, thin offline UI, and a field pilot measuring learning—not just homework completion.
+| Quantization |  Gen TPS |       Peak RSS | Hardware Composite |
+| ------------ | -------: | -------------: | -----------------: |
+| Q4_K_M       |     2.54 |     1897.66 MB |              19.79 |
+| **Q5_K_M**   | **2.46** | **1402.11 MB** |          **21.01** |
+| Q6_K         |     2.44 |     1553.22 MB |              20.55 |
 
-*This research was carried out on the High Performance Computing resources at New York University Abu Dhabi.*
+We selected **Q5_K_M**.
+
+Q4 was slightly faster in our run, but Q5 used substantially less peak memory and produced the highest measured hardware composite score. Q6 increased memory use without a meaningful throughput advantage.
+
+The final model is approximately **1.2 GB on disk**.
+
+QLoRA's 4-bit training representation and the final Q5 GGUF are separate optimization stages. The former reduces the cost of fine-tuning, while the latter determines the deployment trade-off between model quality, memory, and CPU performance.
+
+---
+
+## 5. Evaluation
+
+We evaluate different parts of the system separately because a single accuracy number would hide important differences between STEM problem solving and tutoring behavior.
+
+### Model quality
+
+| Evaluation           |   n |     Score | Measures                                    |
+| -------------------- | --: | --------: | ------------------------------------------- |
+| Custom tutoring set  | 101 | **98.0%** | Tutoring behavior and instruction following |
+| AfriMGSM English     | 250 | **39.2%** | Unseen mathematical problem solving         |
+| English STEM holdout | 100 | **37.0%** | Unseen STEM problem solving                 |
+| AfriMGSM Amharic     | 250 |      2.4% | Secondary multilingual diagnostic           |
+| AfriMMLU Amharic     | 500 |     21.6% | Secondary multilingual diagnostic           |
+
+The **98% tutoring score should not be interpreted as 98% general STEM accuracy**. The evaluations measure different capabilities.
+
+Across the current evaluation suite, results range widely depending on the task. TebebAI performs considerably better at following the tutoring behaviors it was explicitly trained for than at solving every unseen reasoning problem correctly.
+
+Improving raw STEM accuracy while preserving those tutoring behaviors is a major next step.
+
+### Deployment performance
+
+For the selected Q5_K_M model:
+
+| Metric                      |        Result |
+| --------------------------- | ------------: |
+| Generation throughput       | 2.46 tokens/s |
+| Peak RSS                    |       1402 MB |
+| Steady RSS                  |       1304 MB |
+| Thermal throttling observed |            No |
+| Performance score           |          16.4 |
+| Memory-efficiency score     |         80.44 |
+| Hardware composite          |         21.01 |
+
+These measurements were collected on **NYU Abu Dhabi Jubail compute nodes**, not yet on a physical ADTC Standard Laptop.
+
+The memory result provides substantial headroom below the competition's 7 GB evaluator budget, but throughput and thermal behavior still need to be validated on the exact target hardware.
+
+---
+
+## 6. Tools
+
+| Tool                       | Purpose                                                |
+| -------------------------- | ------------------------------------------------------ |
+| **PyTorch / Transformers** | Base-model loading and fine-tuning                     |
+| **PEFT / QLoRA**           | Parameter-efficient supervised fine-tuning             |
+| **Hugging Face Datasets**  | Loading and preprocessing GSM8K and SciQ               |
+| **llama.cpp**              | GGUF conversion and local CPU inference                |
+| **ADTC Profiler**          | Throughput, memory, and hardware evaluation            |
+| **Slurm**                  | Reproducible training and evaluation jobs on NYUAD HPC |
+
+The pipeline was intentionally kept simple. TebebAI uses one model and one inference runtime rather than a router, retrieval service, cloud fallback, or secondary model.
+
+---
+
+## 7. Constraints and Limitations
+
+### Target hardware
+
+TebebAI is designed around the ADTC Standard Laptop:
+
+* 8 GB DDR4 RAM
+* x86-64 CPU
+* integrated graphics
+* Ubuntu 22.04
+* no discrete GPU required for inference
+
+The final Q5 model currently peaks at approximately **1.4 GB RSS** in our profiler run.
+
+### Offline operation
+
+Inference requires no network access.
+
+The model is downloaded once using:
+
+```bash
+bash download_model.sh
+```
+
+After that, TebebAI runs entirely from the local GGUF file.
+
+### Current model quality
+
+The current evaluation results vary substantially by task, from roughly the mid-30% range on unseen English STEM reasoning benchmarks to much stronger scores on the tutoring-behavior rubric.
+
+This means the system is currently better at **how it tutors** than it is at solving every difficult STEM problem correctly.
+
+### Multilingual support
+
+TebebAI originally explored bilingual Amharic-English tutoring.
+
+Earlier experiments encountered poor Amharic tokenizer efficiency, limited high-quality tutoring data, and weak evaluation performance. We therefore narrowed v6 to English rather than shipping an unreliable multilingual model.
+
+The Amharic work remains part of the next stage of the project.
+
+---
+
+## 8. Running TebebAI
+
+Download the model:
+
+```bash
+bash download_model.sh
+```
+
+Then launch the local terminal interface:
+
+```bash
+python chat.py
+```
+
+The model loads from:
+
+```text
+model/tebeb_tutor_1.7b.gguf
+```
+
+`chat.py` provides a minimal multi-turn interface and removes Qwen thinking markers before displaying responses.
+
+No internet connection or API credentials are required during inference.
+
+---
+
+## 9. What We Learned
+
+### Specialization helps small models
+
+A 1.7B model cannot match large cloud models across every reasoning task, but targeted fine-tuning can shape it into a more useful specialist.
+
+The tutoring dataset noticeably improved behaviors such as giving hints, explaining steps, and identifying mistakes.
+
+### Deployment has to be optimized separately
+
+Fine-tuning efficiency does not automatically produce efficient inference.
+
+QLoRA reduced training memory requirements, but choosing the final deployment format still required a separate Q4/Q5/Q6 quantization sweep.
+
+### Scope matters
+
+Earlier versions explored a larger bilingual system. Those experiments were useful, but narrowing v6 to a reproducible English model allowed us to complete and evaluate the full deployment pipeline.
+
+---
+
+## 10. Next Steps
+
+### Improve STEM accuracy
+
+The current evaluation suite produces scores ranging from roughly **34% to 98% depending on what is being measured**.
+
+We plan to expand the frozen evaluation suite and clearly separate:
+
+* answer accuracy,
+* reasoning quality,
+* tutoring behavior,
+* and instruction following.
+
+We also want to benchmark TebebAI directly against the original Qwen3-1.7B model to quantify the effect of fine-tuning.
+
+### Validate on target hardware
+
+The next profiling run will use a physical **8 GB ADTC Standard Laptop** and measure:
+
+* generation throughput,
+* peak memory,
+* CPU utilization,
+* temperature,
+* thermal throttling,
+* and accuracy within the official profiler.
+
+### Return to Amharic
+
+A future version will revisit Amharic using better native tutoring data and a base model selected with tokenizer efficiency in mind.
+
+### Build a simple offline interface
+
+The current terminal interface proves the deployment path. The next product layer will provide a lightweight local chat interface that hides model configuration from the student.
+
+### Test with students
+
+The longer-term goal is to evaluate whether hinting, explanation, and error diagnosis actually improve learning outcomes in environments where cloud access cannot be assumed.
+
+---
+
+## Reproducibility
+
+Training, evaluation, and profiling artifacts are stored under:
+
+```text
+adtc/docs/artifacts/v6/
+```
+
+Detailed results:
+
+```text
+adtc/docs/RESULTS_REPORT.md
+```
+
+Training configuration:
+
+```text
+adtc/training/configs/qlora_qwen3_1_7b_v6.yaml
+```
+
+End-to-end pipeline:
+
+```text
+adtc/hpc/submit_chain.sh
+```
+
+---
+
+*This research was carried out using the High Performance Computing resources at New York University Abu Dhabi.*
