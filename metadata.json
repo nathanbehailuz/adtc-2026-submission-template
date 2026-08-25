@@ -19,7 +19,7 @@
   "test_prompts": [
     {
       "prompt_id": "tp_001",
-      "prompt": "I wrote 3/4 + 1/2 = 4/6. Where did I go wrong? Give me one hint without telling me the final answer."
+      "prompt": "What is the difference between speed and acceleration?"
     },
     {
       "prompt_id": "tp_002",

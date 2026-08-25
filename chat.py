@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -138,7 +139,41 @@ def user_content(text: str) -> str:
     return f"/no_think\n{text}"
 
 
-def chat_loop(llm, max_tokens: int, temperature: float) -> None:
+class ThinkingSpinner:
+    """Animated 'thinking' indicator while the model generates."""
+
+    FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+    LABELS = ("thinking", "thinking.", "thinking..", "thinking...")
+
+    def __init__(self) -> None:
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> ThinkingSpinner:
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1.0)
+        # Clear the spinner line, leave cursor at start of TebebAI reply
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+
+    def _run(self) -> None:
+        i = 0
+        while not self._stop.wait(0.08):
+            frame = self.FRAMES[i % len(self.FRAMES)]
+            label = self.LABELS[(i // 4) % len(self.LABELS)]
+            sys.stdout.write(f"\rTebebAI> {frame} {label}")
+            sys.stdout.flush()
+            i += 1
+
+
+def chat_loop(llm, model_path: Path, max_tokens: int, temperature: float) -> None:
     history: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     while True:
         try:
@@ -154,26 +189,29 @@ def chat_loop(llm, max_tokens: int, temperature: float) -> None:
             break
         if low in {"clear", "reset"}:
             history = [{"role": "system", "content": SYSTEM_PROMPT}]
-            print("(conversation cleared)\n")
+            # Clear the terminal screen, then reprint the intro header
+            sys.stdout.write("\033[2J\033[H")
+            sys.stdout.flush()
+            print_intro(model_path)
             continue
 
         history.append({"role": "user", "content": user_content(raw)})
-        print("TebebAI> ", end="", flush=True)
         t0 = time.perf_counter()
         try:
-            out = llm.create_chat_completion(
-                messages=history,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+            with ThinkingSpinner():
+                out = llm.create_chat_completion(
+                    messages=history,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
             reply = out["choices"][0]["message"]["content"] or ""
         except Exception as e:  # noqa: BLE001
             history.pop()
-            print(f"\n[error] generation failed: {e}\n")
+            print(f"[error] generation failed: {e}\n")
             continue
         cleaned = clean_response(reply)
         elapsed = time.perf_counter() - t0
-        print(f"{cleaned}\n  ({elapsed:.1f}s)\n")
+        print(f"TebebAI> {cleaned}\n  ({elapsed:.1f}s)\n")
         history.append({"role": "assistant", "content": cleaned})
 
 
@@ -191,7 +229,7 @@ def main() -> None:
     n_threads = args.n_threads if args.n_threads is not None else default_n_threads()
     llm = load_llm(model_path, n_ctx=args.n_ctx, n_threads=n_threads)
     print_intro(model_path)
-    chat_loop(llm, max_tokens=args.max_tokens, temperature=args.temperature)
+    chat_loop(llm, model_path, max_tokens=args.max_tokens, temperature=args.temperature)
 
 
 if __name__ == "__main__":

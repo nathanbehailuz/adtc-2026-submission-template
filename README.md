@@ -14,17 +14,19 @@ Submit your repository URL via [adtc-2026.devpost.com](https://adtc-2026.devpost
 
 Before submitting, confirm every item:
 
-- [ ] Your repository is **public** on GitHub
-- [ ] `metadata.json` is fully filled in — no placeholder values remain
-- [ ] `metadata.json` contains exactly **2 test prompts** in the `test_prompts` array, written for your chosen domain
-- [ ] `download_model.sh` successfully downloads your model to `model/`
-- [ ] The downloaded file is a valid **GGUF format** (`.gguf`) weight file
-- [ ] `model/*.gguf` is listed in `.gitignore` — do **not** commit large weight files
-- [ ] `REPORT.md` is filled in with your technical writeup
-- [ ] Running `bash download_model.sh` completes without errors
-- [ ] Your model runs entirely **offline** — zero external network calls during inference
+- [x] Your repository is **public** on GitHub
+- [x] `metadata.json` is fully filled in — no placeholder values remain
+- [x] `metadata.json` contains exactly **2 test prompts** in the `test_prompts` array, written for your chosen domain
+- [x] `download_model.sh` successfully downloads your model to `model/`
+- [x] The downloaded file is a valid **GGUF format** (`.gguf`) weight file
+- [x] `model/*.gguf` is listed in `.gitignore` — do **not** commit large weight files
+- [x] `REPORT.md` is filled in with your technical writeup
+- [x] Running `bash download_model.sh` completes without errors
+- [x] Your model runs entirely **offline** — zero external network calls during inference
 
 ---
+
+
 
 ## Required File Structure
 
@@ -47,10 +49,12 @@ Local demo helpers (not required by the evaluator):
 
 ---
 
+
+
 ## Try the tutor (local demo)
 
 ```bash
-cd adtc-2026-submission-template   # or this repo root if this *is* the submission
+cd adtc-2026-submission-template  
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 bash download_model.sh
@@ -61,6 +65,8 @@ python chat.py
 
 ---
 
+
+
 ## metadata.json
 
 Fill in every field. No field should remain at its placeholder value.
@@ -69,21 +75,25 @@ This submission uses domain `math_scientific_reasoning`, English-only (`language
 
 ### Field Reference
 
-| Field | Required | Description |
-|---|---|---|
-| `team_id` | yes | Your unique team ID as registered on the ADTF portal |
-| `domain` | yes | Challenge track (e.g. `math_scientific_reasoning`) |
-| `language_scope` | yes | Array of BCP-47 language codes |
-| `african_alpha_claim` | yes | `true` only if claiming the African Use Case Bonus |
-| `budget_laptop_claim` | yes | Must be `true` — 8 GB RAM laptop profile |
-| `submitter.*` | yes | Name, email, GitHub handle |
-| `cross_disciplinary_pairing.*` | yes | Discipline + load-bearing description |
-| `test_prompts` | yes | **Exactly 2** domain prompts |
-| `model.runtime` | yes | Must be `llama.cpp` |
-| `model.quantization` | yes | GGUF format (e.g. `Q5_K_M`) |
-| `_runtime.model_path` | yes | Relative path to the `.gguf` (e.g. `model/tebeb_tutor_1.7b.gguf`) |
+
+| Field                          | Required | Description                                                       |
+| ------------------------------ | -------- | ----------------------------------------------------------------- |
+| `team_id`                      | yes      | Your unique team ID as registered on the ADTF portal              |
+| `domain`                       | yes      | Challenge track (e.g. `math_scientific_reasoning`)                |
+| `language_scope`               | yes      | Array of BCP-47 language codes                                    |
+| `african_alpha_claim`          | yes      | `true` only if claiming the African Use Case Bonus                |
+| `budget_laptop_claim`          | yes      | Must be `true` — 8 GB RAM laptop profile                          |
+| `submitter.*`                  | yes      | Name, email, GitHub handle                                        |
+| `cross_disciplinary_pairing.*` | yes      | Discipline + load-bearing description                             |
+| `test_prompts`                 | yes      | **Exactly 2** domain prompts                                      |
+| `model.runtime`                | yes      | Must be `llama.cpp`                                               |
+| `model.quantization`           | yes      | GGUF format (e.g. `Q5_K_M`)                                       |
+| `_runtime.model_path`          | yes      | Relative path to the `.gguf` (e.g. `model/tebeb_tutor_1.7b.gguf`) |
+
 
 ---
+
+
 
 ## download_model.sh
 
@@ -97,11 +107,15 @@ Rules:
 
 ---
 
-## REPORT.md
 
-Technical writeup for judges. Cover problem, design decisions, constraints, and benchmarks. See the filled [`REPORT.md`](REPORT.md) in this repo.
+
+## [REPORT.md](http://REPORT.md)
+
+Technical writeup for judges. Cover problem, design decisions, constraints, and benchmarks. See the filled `[REPORT.md](REPORT.md)` in this repo.
 
 ---
+
+
 
 ## Local Testing (profiler)
 
@@ -129,6 +143,8 @@ Profiler: [github.com/Africa-Deep-Tech-Foundation/adtc-profiler](https://github.
 
 ---
 
+
+
 ## Rules
 
 1. **Public repository required.**
@@ -140,13 +156,17 @@ Profiler: [github.com/Africa-Deep-Tech-Foundation/adtc-profiler](https://github.
 
 ---
 
+
+
 ## Support
 
-Open an issue or contact the ADTF team at challenge@africadeeptech.org.
+Open an issue or contact the ADTF team at [challenge@africadeeptech.org](mailto:challenge@africadeeptech.org).
 
 Eligibility: [adtc-2026.devpost.com/rules](https://adtc-2026.devpost.com/rules).
 
 ---
+
+
 
 ## License
 
