@@ -27,11 +27,11 @@
   "test_prompts": [
     {
       "prompt_id": "tp_001",
-      "prompt": "A student is solving the following problem.\n\nStudent says area of a triangle with base 10 and height 4 is 40.\n\nDo not simply give the correct final answer. Identify the exact mistake, explain why that step is wrong, give a hint so the student can correct it, and ask one short follow-up question."
+      "prompt": "A student says a triangle with base 10 and height 4 has area 40. Identify the first mistake, then give one hint. Do not give the final number."
     },
     {
       "prompt_id": "tp_002",
-      "prompt": "A student is stuck on this problem. Give one helpful hint: name the next step, explain why it is valid, and ask one check question. Do not reveal the final numeric answer.\n\nBetty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?"
+      "prompt": "Betty needs $100 for a wallet. She already has half. Parents give $15; grandparents give twice that. Give one hint for how much more she needs."
     }
   ],
   "model": {

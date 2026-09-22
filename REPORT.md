@@ -68,13 +68,13 @@ Judge-smoke checklist pass rate **0.625** (5/8 full multi-part heuristics) — r
 
 We did **not** re-run unmodified stock Qwen3-1.7B on this laptop (no extra base GGUF in the submission). The quantitative base-vs-FT comparison is the accuracy table above (v6 SFT vs v7 SFT vs v7 Q4). Prompt-level before/after for tutoring *protocol* is Round-1 (markup leak / answer dump) vs v7 Q4 (no `####` / `<<>>`; hint and first-error without a final numeric dump on these two prompts):
 
-*Prompt A (first-error):* student says triangle area with base 10 and height 4 is 40.
+*Prompt A (first-error):* “A student says a triangle with base 10 and height 4 has area 40. Identify the first mistake, then give one hint. Do not give the final number.”
 
-> **v7 Q4:** Exact mistake: they used base×height without dividing by 2. Why: a triangle is half of a parallelogram with the same base and height. Hint: recompute 10×4/2. Follow-up: which quantity first, base or height? Do not state the final numeric answer.
+> **v7 Q4:** They computed 10×4 without dividing by 2 (triangle area formula). Hint: recompute 10×4, then rewrite. Follow-up: what should the first intermediate be? No final area.
 
-*Prompt B (hint):* Betty’s $100 wallet word problem; ask for one hint only.
+*Prompt B (hint):* “Betty needs $100 for a wallet. She already has half. Parents give $15; grandparents give twice that. Give one hint for how much more she needs.”
 
-> **v7 Q4:** Hint: start by computing 15×2. Why: isolates the grandparents’ gift (near 30) before later steps. Check question: after that intermediate, what operation comes next? Do not state the final answer.
+> **v7 Q4:** Hint: start by computing 15×2. Why: isolates the grandparents’ gift (near 30). Check question: what operation comes next? Do not state the final answer.
 
 **3) Capacity / data change vs v6**
 
