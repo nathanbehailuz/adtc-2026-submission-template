@@ -18,8 +18,8 @@ MODEL_DIR="$HERE/model"
 # ⚠️ Edit ONLY the two values below (MODEL_FILE, MODEL_URL). Do not change
 # anything else in this file — see "download_model.sh" in README.md for what
 # the evaluator requires.
-MODEL_FILE="$MODEL_DIR/[YOUR_MODEL_FILE_NAME].gguf"
-MODEL_URL="[YOUR_MODEL_URL]"
+MODEL_FILE="$MODEL_DIR/tebeb_tutor_1.7b-Q4_K_M.gguf"
+MODEL_URL="https://huggingface.co/nz2212/tebebAIv2/resolve/58347614c3c7860c126f62fc7bbdb3cd1d15dd65/qwen3_1_7b_merged_v7-Q4_K_M.gguf"
 
 mkdir -p "$MODEL_DIR"
 

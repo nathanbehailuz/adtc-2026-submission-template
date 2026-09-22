@@ -1,66 +1,98 @@
-# Technical Report — [Your Submission Title]
+# Technical Report — TebebAI Offline English STEM Tutor
 
-**Team ID:** your-team-id  
-**Domain:** coding_assistants  
-**Model:** YourModel-Q4_K_M
+**Team ID:** TebebAI  
+**Domain:** math_scientific_reasoning  
+**Model:** tebeb_tutor_1.7b-Q4_K_M
 
 ---
 
 ## Problem
 
-<!-- What problem are you solving? Who is the target user? Why does this matter in an African context? -->
+Students in low-connectivity settings need a **STEM tutor that runs fully offline** on an 8 GB budget laptop. The target user is a secondary-school learner (or peer tutor) working through English math and science without reliable internet, cloud APIs, or a discrete GPU.
 
-Describe the problem your model addresses, the target user group, and why running this model locally (offline, on consumer hardware) is important for this use case.
+TebebAI ships a single specialized GGUF that emphasizes tutoring behaviors—diagnose the first mistake, give one actionable hint, explain steps—rather than dumping final answers or leaking web-dataset markup (`####`, `<<>>`).
 
 ---
 
 ## Design Decisions
 
-<!-- What model did you start from? Why that base model and quantization? What alternatives did you consider and reject? -->
-
-- **Base model:** e.g. Llama 3.2 1B, Mistral 7B, Phi-3 mini, etc.
-- **Quantization:** e.g. Q4_K_M chosen for balance of quality and memory footprint
-- **Alternatives considered:** e.g. Q8_0 exceeded 8 GB limit; Q2_K degraded output quality too aggressively
+- **Base model:** `Qwen/Qwen3-1.7B` (Hub revision `70d244cc86ccca08cf5af4e1e306ecf908b1ad5e`). Fits laptop RAM after GGUF quantization; strong enough for multi-step arithmetic and middle-school science after SFT.
+- **Adaptation:** QLoRA SFT (4-bit nf4 + LoRA **r=32 / α=64**, **2 epochs**) on English-only `sft_mix_v7` (**10636** rows): cleaned GSM8K + SciQ tutoring templates + **163** authored multi-constraint tutoring examples.
+- **Quantization:** Converted f16→Q8/Q6/Q5/Q4 with llama.cpp **b10451**. **Deploy pick: Q4_K_M** — EN frozen accuracy matches Q5 within ~1 pp while targeting higher TPS / lower RSS on the Standard Laptop. Q5 remains a documented alternate.
+- **Runtime:** llama.cpp only; one GGUF; no router; no network at inference.
+- **Round-1 → Gate 2 fixes:** strip GSM8K `####` / `<<>>` from training targets; richer hint / first-error / multi-part scaffolding; authored tutoring bank; capacity bump (r 16→32, α 32→64, 1→2 epochs).
 
 ---
 
 ## Model Provenance
 
-<!-- Where did your model actually come from? This must match the `provenance` object in metadata.json. -->
+Must match `metadata.json` → `provenance`:
 
-- **Base model source:** e.g. `huggingface:microsoft/Phi-3-mini-4k-instruct-gguf`
-- **Base model commit SHA:** the exact commit you started from (see README's Model Provenance section for how this differs from the download-pin commit in `download_model.sh`)
-- **Fine-tuning method:** `none` / `prompt_engineering` / `lora` / `qlora` / `full_fine_tune`
-- **Training datasets:** name(s) and source(s), or "N/A — used stock model as-is"
+| Field | Value |
+|-------|--------|
+| Base model source | `huggingface:Qwen/Qwen3-1.7B` |
+| Base model commit SHA | `70d244cc86ccca08cf5af4e1e306ecf908b1ad5e` |
+| Fine-tuning method | `qlora` |
+| Training datasets | openai/gsm8k (cleaned); allenai/sciq (subset); authored_tutoring_v7 |
 
-If you fine-tuned (method is not `none`), include a before/after comparison showing what changed:
+Proof-of-training: `provenance/` (adapter weights + config, train YAML, train/merge/convert scripts, dataset description + sample + SHA256 checksums, merge→GGUF notes, training log summary).
 
-<!-- e.g. a short table or 2-3 example prompts with the base model's output vs. your fine-tuned model's output, or a metric that moved (accuracy on a held-out set, etc.) -->
+### Before / after — what fine-tuning changed
 
-If you used a stock/off-the-shelf model without modification, say so plainly here — that's a legitimate and expected submission path; this section only needs the base model source and commit.
+**1) Held-out accuracy (reproducible)**
+
+| Suite | v6 merged HF (prior SFT) | v7 merged HF | v7 Q4 GGUF |
+|-------|-------------------------:|-------------:|-----------:|
+| AfriMGSM EN | 0.392 | **0.444** | **0.428** |
+| EN STEM holdout | 0.370 | **0.470** | **0.430** |
+| Custom tutoring (soft) | 0.980 | **1.000** | **1.000** |
+
+Q5 GGUF (EN-only eval): AfriMGSM EN **0.432**, EN STEM **0.430**, tutoring **1.0** — tied with Q4 for deploy choice.
+
+**2) Prompt-level tutoring (Round-1 failure → Gate 2)**
+
+Round-1 auto/judge prompts leaked GSM8K markup and dumped answers. Example **before** (Round-1 submitted model, stoich prompt):
+
+> … 1.5 mol \* 44 g/mol = \<\<1.5\*44=66\>\>66 g of carbon dioxide is produced.  
+> **#### 66**
+
+**After** v7 Q4 judge smoke (`markup_leak_rate = 0.0` on 8 prompts): no `####` / `<<>>` in any reply. Example hint behavior (preview):
+
+> Hint: subtract 7 from both sides. Why: undo addition, which keeps equality. Check question: what equation remains after that step? Do not state x.
+
+Judge-smoke checklist pass rate **0.625** (5/8 full multi-part heuristics) — remaining gaps are scaffolding depth (analogy / exact stoich mass), not format leak.
+
+**3) Capacity / data change vs v6**
+
+| Knob | v6 | v7 |
+|------|----|----|
+| LoRA r / α | 16 / 32 | **32 / 64** |
+| Epochs | 1 | **2** |
+| Markup in targets | present | **stripped** |
+| Authored tutoring | thin | **163** multi-constraint rows |
 
 ---
 
 ## Constraints
 
-<!-- What hardware, connectivity, power, or data constraints shaped your choices? -->
-
-- Target: 8 GB RAM, integrated GPU, Ubuntu 22.04
-- No GPU acceleration — pure CPU inference via llama.cpp
-- Any specific connectivity or data availability constraints relevant to your domain
+- Target: **8 GB RAM**, integrated graphics, Ubuntu 22.04-class laptop
+- Official scoring: **CPU llama.cpp only** (no CUDA requirement)
+- Fully **offline** after `download_model.sh`
+- Single artifact path in `metadata.json` `_runtime.model_path`
 
 ---
 
 ## Benchmarks
 
-<!-- What inference speed and memory numbers did you observe on your development machine? -->
+Self-reported development numbers. Official scores come from the ADTC profiler on the standard evaluation machine.
 
 | Metric | Value |
 |---|---|
-| Machine | e.g. MacBook Air M2 / ThinkPad X1 i5 |
-| RAM at peak | e.g. 3.8 GB |
-| Time to first token | e.g. 420 ms |
-| Generation speed | e.g. 18.4 t/s |
-| Thermal throttling | e.g. None observed |
+| Machine (train / frozen eval) | Shadeform A6000-class (2026-09-22) |
+| Machine (deploy target) | ADTC Standard Laptop (8 GB / 4 vCPU) |
+| llama-bench tg (dev, Q4_K_M, 12 threads) | ~33.9 tok/s (b10451; not Standard Laptop) |
+| Peak RSS / gen TPS (official) | Fill from ADTC profiler after `download_model.sh` smoke — do not invent |
+| Judge smoke (Q4) | markup_leak_rate **0.0**; checklist_pass_rate **0.625** (n=8) |
+| Thermal throttling | Not observed on train host; laptop TBD |
 
-These are self-reported development benchmarks. Official scores are measured by the ADTC profiler on the standard evaluation machine.
+v6 Jubail profiler reference (same base size, Q5_K_M): ~2.46 gen tok/s, ~1402 MB peak RSS — **not** claimed as v7 Gate 2 numbers.

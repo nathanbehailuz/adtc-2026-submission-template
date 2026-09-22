@@ -1,0 +1,41 @@
+# Training log notes — QLoRA SFT v7
+
+## Run
+
+| Field | Value |
+|-------|--------|
+| Base model | `Qwen/Qwen3-1.7B` @ `70d244cc86ccca08cf5af4e1e306ecf908b1ad5e` |
+| Method | QLoRA (4-bit nf4 + LoRA) |
+| Config | `qlora_qwen3_1_7b_v7.yaml` (this folder) |
+| Data | `sft_mix_v7.jsonl` (10636 rows) |
+| Output | `training/runs/qwen3_1_7b_qlora_v7` → `adapter/` |
+| Platform | Shadeform / Africa GPU Hub (A6000-class), 2026-09-22 |
+| Script | `scripts/train_sft_qlora.py` |
+
+## Hyperparameters (from config)
+
+- epochs: **2**
+- LoRA r=**32**, α=**64**, dropout=0.05
+- targets: q/k/v/o + gate/up/down proj
+- max_seq_length: 2048
+- lr: 2e-4 cosine, warmup_ratio 0.03
+- batch 1 × grad_accum 8 (effective 8)
+- bf16 + gradient checkpointing
+- seed: 42
+
+## Artifacts in this folder
+
+- `adapter_model.safetensors` — trained LoRA weights
+- `adapter_config.json` — PEFT config (r=32, α=64)
+- `training_args.bin` — Hugging Face / TRL trainer args blob from the run
+- `qlora_qwen3_1_7b_v7.yaml` — exact train config
+
+## Loss curve note
+
+Step-level `trainer_state.json` / `agh/logs/train_sft.log` were not copied off the GPU instance before packaging. Training completed successfully on Shadeform (merge produced `qwen3_1_7b_merged_v7`; HF frozen eval followed). Re-attach instance logs if organizers request a numeric loss series.
+
+## Post-train
+
+1. Merge adapters → full HF weights (`scripts/merge_lora.py`)
+2. Convert → GGUF f16 then Q8/Q6/Q5/Q4 (`scripts/convert_gguf.sh`)
+3. Gate 5 profiler selects deploy quant (provisional: **Q5_K_M**)

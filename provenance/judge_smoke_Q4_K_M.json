@@ -1,0 +1,110 @@
+{
+  "n": 8,
+  "checklist_pass_rate": 0.625,
+  "markup_leak_rate": 0.0,
+  "items": [
+    {
+      "id": "judge_smoke_hint_001",
+      "behavior": "hint",
+      "checks": {
+        "no_markup": true,
+        "no_final_x": true,
+        "has_why": true,
+        "has_question": true
+      },
+      "pass": true,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\nHint: rewrite the equation by distributing the 3 first.\nWhy it is valid: parentheses indicate which operation should happen first in an expression with multiple terms.\nCheck question: after distributing, what equation do "
+    },
+    {
+      "id": "judge_smoke_error_001",
+      "behavior": "first_error",
+      "checks": {
+        "no_markup": true,
+        "names_mistake": true,
+        "has_hint": true,
+        "has_question": true,
+        "no_final_a": true
+      },
+      "pass": true,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\nExact mistake: In the last step they computed 20 N·s instead of 20 m/s; F=ma requires mass·acceleration to isolate acceleration when force and mass are given.\nWhy: Acceleration (a) must have units of m/s² for consistency "
+    },
+    {
+      "id": "judge_smoke_multipart_001",
+      "behavior": "explain",
+      "checks": {
+        "no_markup": true,
+        "mentions_turbine": true,
+        "mentions_energy": true,
+        "mentions_force_or_power": true,
+        "has_analogy": false,
+        "has_misconception": true,
+        "has_two_questions": true
+      },
+      "pass": false,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\n1. Stored water → falling water → turbine → generator → electricity.\n2. Energy is the capacity to do work; force is a push/pull; power is how fast energy is delivered.\n3. In Africa, stored water might be behind a dam on a"
+    },
+    {
+      "id": "judge_smoke_apex_001",
+      "behavior": "explain",
+      "checks": {
+        "no_markup": true,
+        "velocity_zero": true,
+        "accel_nonzero": true
+      },
+      "pass": true,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\nAt the top, velocity is zero because the ball has no horizontal speed. Acceleration is still 9.8 m/s² straight down due to gravity, as acceleration is about how fast the velocity is changing, not whether it is zero. Both "
+    },
+    {
+      "id": "judge_smoke_quad_001",
+      "behavior": "solve",
+      "checks": {
+        "no_markup": true,
+        "completing_square": true,
+        "has_final_formula": true
+      },
+      "pass": true,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\n1. Divide both sides by a: x^2 + (b/a)x + c/a = 0.\n2. Move the constant term: x^2 + (b/a)x = -c/a.\n3. Complete the square by adding (b/(2a))^2 to both sides: x^2 + (b/a)x + (b^2)/(4a^2) = -c/a + (b^2)/(4a^2).\n4. Factor th"
+    },
+    {
+      "id": "judge_smoke_stoich_001",
+      "behavior": "solve",
+      "checks": {
+        "no_markup": true,
+        "limiting_oxygen": true,
+        "co2_33": false
+      },
+      "pass": false,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\n1. Molar masses: CH4=16 g/mol, O2=32 g/mol, CO2=44 g/mol.\n2. Moles: 1 mol CH4 from 16 g, 1.5 mol O2 from 48 g.\n3. Stoichiometry: 1.5 mol O2 needs 1.5 mol CH4 for a 1:1 ratio.\n4. Available: 1 mol CH4 < 1.5 mol O2 → CH4 is "
+    },
+    {
+      "id": "judge_smoke_sheet_001",
+      "behavior": "first_error",
+      "checks": {
+        "no_markup": true,
+        "line1_or_distribute": true,
+        "no_final_x": false
+      },
+      "pass": false,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\nFirst mistake: Line 1.\nCorrective hint: Rewrite the original equation carefully, line by line, using the same operation on both sides. Do not compute 3x-2 yet.\nNext check: After fixing, test x=7 in the original equation.\n"
+    },
+    {
+      "id": "judge_smoke_hint_002",
+      "behavior": "hint",
+      "checks": {
+        "no_markup": true,
+        "no_final_x": true,
+        "has_why": true
+      },
+      "pass": true,
+      "markup_leak": false,
+      "pred_preview": "<think>\n\n</think>\n\nHint: subtract 7 from both sides. Why: undo addition, which keeps equality. Check question: what equation remains after that step? Do not state x."
+    }
+  ]
+}
