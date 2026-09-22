@@ -35,7 +35,9 @@ Must match `metadata.json` → `provenance`:
 | Fine-tuning method | `qlora` |
 | Training datasets | openai/gsm8k (cleaned); allenai/sciq (subset); authored_tutoring_v7 |
 
-Proof-of-training: `provenance/` (adapter weights + config, train YAML, train/merge/convert scripts, dataset description + sample + SHA256 checksums, merge→GGUF notes, training log summary).
+Proof-of-training: `provenance/` (adapter weights + config, train YAML, train/merge/convert scripts, dataset description + licenses + sample + SHA256 checksums, merge→GGUF notes, training log with mean `train_loss = 0.6026`).
+
+Training data licenses: GSM8K (MIT); SciQ (CC-BY-NC 3.0); authored_tutoring_v7 (original); base `Qwen/Qwen3-1.7B` per Hub card.
 
 ### Before / after — what fine-tuning changed
 
@@ -61,6 +63,18 @@ Round-1 auto/judge prompts leaked GSM8K markup and dumped answers. Example **bef
 > Hint: subtract 7 from both sides. Why: undo addition, which keeps equality. Check question: what equation remains after that step? Do not state x.
 
 Judge-smoke checklist pass rate **0.625** (5/8 full multi-part heuristics) — remaining gaps are scaffolding depth (analogy / exact stoich mass), not format leak.
+
+**Laptop tutoring traces (v7 Q4, same texts as `metadata.json` `test_prompts`)**
+
+We did **not** re-run unmodified stock Qwen3-1.7B on this laptop (no extra base GGUF in the submission). The quantitative base-vs-FT comparison is the accuracy table above (v6 SFT vs v7 SFT vs v7 Q4). Prompt-level before/after for tutoring *protocol* is Round-1 (markup leak / answer dump) vs v7 Q4 (no `####` / `<<>>`; hint and first-error without a final numeric dump on these two prompts):
+
+*Prompt A (first-error):* student says triangle area with base 10 and height 4 is 40.
+
+> **v7 Q4:** Exact mistake: they used base×height without dividing by 2. Why: a triangle is half of a parallelogram with the same base and height. Hint: recompute 10×4/2. Follow-up: which quantity first, base or height? Do not state the final numeric answer.
+
+*Prompt B (hint):* Betty’s $100 wallet word problem; ask for one hint only.
+
+> **v7 Q4:** Hint: start by computing 15×2. Why: isolates the grandparents’ gift (near 30) before later steps. Check question: after that intermediate, what operation comes next? Do not state the final answer.
 
 **3) Capacity / data change vs v6**
 
@@ -91,7 +105,7 @@ Self-reported development numbers. Official scores come from the ADTC profiler o
 | Machine (train / frozen eval) | Shadeform A6000-class (2026-09-22) |
 | Machine (deploy target) | ADTC Standard Laptop (8 GB / 4 vCPU) |
 | llama-bench tg (dev, Q4_K_M, 12 threads) | ~33.9 tok/s (b10451; not Standard Laptop) |
-| Peak RSS / gen TPS (official) | Fill from ADTC profiler after `download_model.sh` smoke — do not invent |
+| Peak RSS / gen TPS (official) | Measured by the ADTC profiler on the Standard Laptop — not claimed from Shadeform llama-bench |
 | Judge smoke (Q4) | markup_leak_rate **0.0**; checklist_pass_rate **0.625** (n=8) |
 | Thermal throttling | Not observed on train host; laptop TBD |
 

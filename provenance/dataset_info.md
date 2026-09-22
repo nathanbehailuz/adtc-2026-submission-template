@@ -51,6 +51,15 @@ Each JSONL line:
 
 Training mix is deduped against frozen EN eval holdouts (`en_stem_holdout_v0`, `afrimgsm_eng_test_v0`) during mix build.
 
+## Licenses
+
+| Source | License | Use here |
+|--------|---------|----------|
+| `openai/gsm8k` | MIT | Train templates (cleaned) |
+| `allenai/sciq` | CC-BY-NC 3.0 | Train subset (non-commercial research / challenge) |
+| `authored_tutoring_v7` | Original to TebebAI | 163 hand-authored tutoring rows |
+| `Qwen/Qwen3-1.7B` | Tongyi Qianwen license (see Hub card) | Base weights; Hub revision `70d244cc86ccca08cf5af4e1e306ecf908b1ad5e` |
+
 ## Sample excerpt
 
-See `samples/sft_mix_v7_sample.jsonl` (one hint, one first_error, one explain row).
+See `samples/sft_mix_v7_sample.jsonl` (GSM8K hint + authored first-error + authored explain).

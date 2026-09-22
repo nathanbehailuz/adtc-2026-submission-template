@@ -1,16 +1,23 @@
+# SHA256 of provenance files in this folder.
+# Lines starting with # are comments, not hashes.
+
 c7b799b4f611f648e409c6865fb38fdf243a27f383c49df01c0e96efbd7b5aed  adapter_model.safetensors
 62fc66be5f3f3f0b0f8a1dc3d414b2b1c9b50163d88779a1a49f3267f893c5e8  adapter_config.json
 f2359e33786a15810dada3fe53532585f3390ba7b9b4c6499740b729939cdd0f  training_args.bin
 f92fb4f2c9611b53db5fcbf3cbc9f66f9e305a6e75c089a08c5dfee6d54e9951  qlora_qwen3_1_7b_v7.yaml
-b016194f175f7a0614f70a441ffb4dc7d16fdc42f701dfc3934386fca97d7f0a  dataset_info.md
-dc255ab84cb27449b62bc986df1edf06f547cac09cd15f7399a93c98a6703275  training_log.txt
+b6a14a48a20d665fb0ca533daa309712902cc5bef7f6fd58d2ab24f1eea6ac75  dataset_info.md
+9fdf16dcc9d448fcf10ce642938aa584839abe203202c25cc80787c9d591d5a7  training_log.txt
 ff16629ddd244523a6a6d52857f857b6bd054750ebcd7a8b4e6f3c6cdd696696  merge_gguf.md
 773055c14af0f477a62de88e09446e12c746cea2ca64e78f7df202ae5fb570d4  scripts/train_sft_qlora.py
 5339c663874fc9d153c702a62f1f106391e35e345cce3a7940630aadbe63abff  scripts/merge_lora.py
 75efee2ac0f41c4f55803b246737df19007305584c35a8a449c657d3647462f7  scripts/convert_gguf.sh
-5d94b146093ae24d09a4ce73c044af44125bd16c278419f774a1463c6abf6b79  samples/sft_mix_v7_sample.jsonl
+242af468fad83ff182e194dedecceabddec2a84cbc85bc2fe647deb65034c5eb  samples/sft_mix_v7_sample.jsonl
 605184a9505e83b7893ae1205b985c49fbc6c2ddad00819b8fdbb18d395c3b04  sft_mix_v7.jsonl  # full mix (not committed; 10636 rows)
-70d244cc86ccca08cf5af4e1e306ecf908b1ad5e  huggingface:Qwen/Qwen3-1.7B  # Hub revision used as base
-TBD_AFTER_UPLOAD  tebeb_tutor_1.7b-Q4_K_M.gguf  # local deploy name; HF file qwen3_1_7b_merged_v7-Q4_K_M.gguf @ 58347614c3c7860c126f62fc7bbdb3cd1d15dd65
-# HF: https://huggingface.co/nz2212/tebebAIv2/resolve/58347614c3c7860c126f62fc7bbdb3cd1d15dd65/qwen3_1_7b_merged_v7-Q4_K_M.gguf
-0c00f7a51e19c0a67a01a02a596ead98625ee4e14277601d8dd117eb18d72b53  qwen3_1_7b_merged_v7-Q4_K_M.gguf (local; same bytes as HF upload)
+
+# Base model identity is a Hugging Face git revision (not SHA256 of a weight file):
+# 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e  huggingface:Qwen/Qwen3-1.7B
+
+# Final deploy GGUF (same bytes as HF nz2212/tebebAIv2 @ 58347614c3c7860c126f62fc7bbdb3cd1d15dd65)
+# Hosted filename: qwen3_1_7b_merged_v7-Q4_K_M.gguf
+# Local runtime name after download_model.sh: tebeb_tutor_1.7b-Q4_K_M.gguf
+0c00f7a51e19c0a67a01a02a596ead98625ee4e14277601d8dd117eb18d72b53  qwen3_1_7b_merged_v7-Q4_K_M.gguf

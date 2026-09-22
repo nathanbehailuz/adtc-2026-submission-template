@@ -30,12 +30,24 @@
 - `training_args.bin` — Hugging Face / TRL trainer args blob from the run
 - `qlora_qwen3_1_7b_v7.yaml` — exact train config
 
-## Loss curve note
+## Loss / run metrics (from `logs/train_sft/20260922T063323Z_69bde2ae.summary.json`)
 
-Step-level `trainer_state.json` / `agh/logs/train_sft.log` were not copied off the GPU instance before packaging. Training completed successfully on Shadeform (merge produced `qwen3_1_7b_merged_v7`; HF frozen eval followed). Re-attach instance logs if organizers request a numeric loss series.
+| Field | Value |
+|-------|--------|
+| run_id | `69bde2ae` |
+| started_utc | 2026-09-22T06:33:23Z |
+| finished_utc | 2026-09-22T09:51:13Z |
+| train_runtime | 11843.08 s (~3.3 h) |
+| epoch | 2.0 |
+| train_loss | **0.6026** |
+| train_samples_per_second | 1.796 |
+| train_steps_per_second | 0.225 |
+| total_flos | 3.428e16 |
+
+Step-level `trainer_state.json` was not copied off Shadeform; this is the trainer-reported mean train loss for the completed 2-epoch run.
 
 ## Post-train
 
 1. Merge adapters → full HF weights (`scripts/merge_lora.py`)
 2. Convert → GGUF f16 then Q8/Q6/Q5/Q4 (`scripts/convert_gguf.sh`)
-3. Gate 5 profiler selects deploy quant (provisional: **Q5_K_M**)
+3. Deploy pick: **Q4_K_M** (EN frozen accuracy tied with Q5; smaller file)
